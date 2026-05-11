@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北京便民摊位·城市空间叙事故事地图</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css">
+    <script src="https://js.arcgis.com/4.32/"></script>
+    <style>
+        html,body{height:100%;margin:0;padding:0;font-family:"Microsoft YaHei",sans-serif;background:#f5fcf4;}
+        #header{height:60px;background:#28a745;color:white;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;box-shadow:0 2px 8px #00000030;}
+        .main-container{display:flex;height:calc(100% - 60px);width:100%;}
+        #storyPanel{flex:1;background:#ffffff;padding:18px;overflow-y:auto;border-right:2px solid #e0e0e0;line-height:1.8;font-size:15px;}
+        #viewDiv{flex:4;height:100%;width:100%;}
+        .chapter{margin-bottom:25px;padding-bottom:15px;border-bottom:1px solid #eee;cursor:pointer;color:#222;transition:all 0.3s;}
+        .chapter:hover{color:#28a745;font-weight:bold;transform:translateX(5px);}
+        .active{color:#28a745;border-left:4px solid #28a745;padding-left:8px;}
+        .story-meta{background:#f8fff7;padding:12px;border-radius:8px;margin-bottom:20px;border-left:3px solid #28a745;}
+        .story-meta div{margin:6px 0;}
+        .hint{color:#666;font-size:14px;font-style:italic;margin-top:10px;}
+    </style>
+</head>
+<body>
+    <div id="header">北京便民摊位 · 城市空间叙事故事地图</div>
+    <div class="main-container">
+        <div id="storyPanel">
+            <div class="story-meta">
+                <div><b>故事主体：</b>北京市城区便民服务摊位（含果蔬零售、便民修理、小吃售卖、生活服务等类型）</div>
+                <div><b>核心事件：</b>便民摊位的空间分布规律、服务覆盖逻辑，以及背后反映的城市公共服务均衡性</div>
+                <div><b>地点：</b>北京市全域（重点覆盖东城区、西城区、朝阳区、海淀区、丰台区等核心城区）</div>
+                <div><b>时间：</b>2024-2025年北京市便民摊位规范化管理期间</div>
+                <div><b>叙事逻辑：</b>从城市全域→核心城区→热点区域→全域规划，通过地图缩放、漫游推动情节，展现便民摊位的空间叙事</div>
+            </div>
+
+            <div class="chapter" onclick="goChapter(1)">【开端】城市全域视角：便民服务的空间基底</div>
+            <div class="chapter" onclick="goChapter(2)">【发展】城区尺度：摊位分布的核心规律</div>
+            <div class="chapter" onclick="goChapter(3)">【高潮】热点聚焦：核心区域的服务密度与民生温度</div>
+            <div class="chapter" onclick="goChapter(4)">【结尾】空间总结：便民摊位的城市价值与规划启示</div>
+            
+            <div id="desc" style="margin-top:30px;padding:15px;background:#f5fcf4;border-radius:8px;">
+                点击左侧章节，地图将自动缩放、漫游至对应视角，跟着地图的脚步，读懂北京便民摊位的空间故事——每一个点位，都是城市服务民生的微小缩影。
+            </div>
+            <div class="hint">提示：点击地图上的摊位点位，可查看详细信息（若图层支持）；左上角可切换底图，感受不同视角下的摊位分布。</div>
+        </div>
+        <div id="viewDiv"></div>
+    </div>
+
+    <script>
+        let view, map;
+        require(["esri/Map","esri/views/MapView","esri/layers/FeatureLayer","esri/widgets/BasemapGallery","esri/widgets/ScaleBar","esri/widgets/Legend","esri/widgets/Popup"],
+        function(Map, MapView, FeatureLayer, BasemapGallery, ScaleBar, Legend, Popup){
+            // 初始化地图
+            map = new Map({basemap:"osm"});
+            view = new MapView({
+                container:"viewDiv",
+                map:map,
+                center:[116.3972,39.9075], // 北京中心点
+                zoom:10,
+                duration:1500
+            });
+
+            // 加载北京便民摊位图层，补充图层样式和弹窗信息，增强交互性
+            const stallLayer = new FeatureLayer({
+                url:"https://www.geosceneonline.cn/server/rest/services/Hosted/北京摆摊地点/FeatureServer/0",
+                title:"北京便民摊位点位",
+                outFields:["*"], // 显示所有字段信息
+                popupTemplate: {
+                    title: "便民摊位详情",
+                    content: `
+                        <div><b>摊位类型：</b>{摊位类型}</div>
+                        <div><b>所在区域：</b>{所在区}</div>
+                        <div><b>服务时间：</b>{服务时间}</div>
+                        <div><b>服务范围：</b>周边500米居民</div>
+                    ` // 弹窗显示摊位详细信息，增强故事细节
+                }
+            });
+            map.add(stallLayer);
+
+            // 地图加载完成后，添加微件，完善交互
+            view.when(()=>{
+                // 底图切换微件（左上角）
+                const basemapGallery = new BasemapGallery({view:view});
+                view.ui.add(basemapGallery,"top-left");
+                // 比例尺微件（左下角）
+                view.ui.add(new ScaleBar({view:view}),"bottom-left");
+                // 图例微件（右下角）
+                view.ui.add(new Legend({view:view}),"bottom-right");
+                // 更新提示文本
+                document.getElementById("desc").innerText="地图加载完成，点击左侧章节，开启北京便民摊位的空间叙事之旅～";
+            });
+        });
+
+        // 章节切换函数，核心：通过地图缩放、漫游推动故事发展，文字仅辅助说明
+        function goChapter(n){
+            // 切换章节激活状态
+            let chapters = document.querySelectorAll(".chapter");
+            chapters.forEach(c=>c.classList.remove("active"));
+            chapters[n-1].classList.add("active");
+            // 获取描述文本容器
+            let desc = document.getElementById("desc");
+
+            // 【开端】城市全域视角：便民服务的空间基底
+            if(n==1){
+                view.goTo({center:[116.3972,39.9075],zoom:10,duration:1800});
+                desc.innerHTML = `
+                    【开端】城市全域视角：便民服务的空间基底<br><br>
+                    我们的故事从北京全域开始——作为一座超大城市，北京的便民服务网络，藏在每一个散落的摊位里。<br>
+                    从地图上可以看到，便民摊位以中心城区为核心，向周边郊区逐步辐射，形成了“核心密集、外围均衡”的整体格局。<br>
+                    这些摊位并非随意分布，而是依托城市人口密度、交通便利性和居民需求，初步构建起覆盖全市的便民服务网络，为后续的城区叙事奠定基础。<br>
+                    （当前视角：北京全域，缩放至10级，可清晰看到摊位的整体分布趋势）
+                `;
+            }
+
+            // 【发展】城区尺度：摊位分布的核心规律
+            if(n==2){
+                view.goTo({center:[116.3972,39.9075],zoom:12,duration:1800});
+                desc.innerHTML = `
+                    【发展】城区尺度：摊位分布的核心规律<br><br>
+                    当地图逐步放大到城区尺度（12级），我们能清晰发现便民摊位的分布密码：<br>
+                    1.  沿交通线分布：地铁口、公交枢纽周边摊位密集，比如地铁1号线、2号线沿线，方便通勤人群快速获取便民服务；<br>
+                    2.  围绕居住区布局：老旧小区、大型社区周边，摊位以果蔬零售、便民修理为主，贴合居民日常需求；<br>
+                    3.  避开核心商圈：王府井、西单等核心商圈，摊位数量较少，主要以品牌商铺为主，体现了摊位与商业形态的互补性。<br>
+                    这种分布模式，既兼顾了居民便利性，也符合城市管理的规范要求，是城市服务精细化的体现。
+                `;
+            }
+
+            // 【高潮】热点聚焦：核心区域的服务密度与民生温度
+            if(n==3){
+                view.goTo({center:[116.407,39.913],zoom:15,duration:1800});
+                desc.innerHTML = `
+                    【高潮】热点聚焦：核心区域的服务密度与民生温度<br><br>
+                    当地图聚焦到核心城区（东城区、西城区交界区域，缩放至15级），我们迎来了故事的高潮——这里的摊位密度达到全市最高，每一个点位都承载着浓厚的民生温度。<br>
+                    以天安门周边、什刹海附近为例，摊位主要以特色小吃、文创零售为主，既服务当地居民，也满足游客需求；而老城区的胡同里，便民修理、果蔬摊位随处可见，解决了老年人“最后500米”的购物难题。<br>
+                    点击地图上的任意摊位点位，可查看其具体类型和服务信息——这些看似微小的摊位，串联起了老北京的烟火气，也成为核心城区便民服务的重要补充。<br>
+                    （当前视角：核心城区热点区域，可清晰看到摊位的密集分布，感受民生服务的便捷性）
+                `;
+            }
+
+            // 【结尾】空间总结：便民摊位的城市价值与规划启示
+            if(n==4){
+                view.goTo({center:[116.3972,39.9075],zoom:11,duration:1800});
+                desc.innerHTML = `
+                    【结尾】空间总结：便民摊位的城市价值与规划启示<br><br>
+                    当地图再次拉回到城区全域（11级），我们的空间叙事也迎来了尾声。<br>
+                    从全域辐射到城区规律，再到热点聚焦，北京便民摊位的空间分布，不仅展现了城市服务的精细化水平，更体现了“以人民为中心”的城市规划理念：核心区域补密度、外围区域补覆盖，让便民服务触手可及。<br>
+                    这些摊位，不仅是城市烟火气的载体，更是城市公共服务体系的重要组成部分——它们填补了大型商超的服务空白，解决了居民日常需求，也为城市增添了温度与活力。<br>
+                    未来，随着城市规划的不断完善，便民摊位将继续在空间上实现更均衡的分布，让每一位居民都能感受到城市服务的便利与温暖。
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
